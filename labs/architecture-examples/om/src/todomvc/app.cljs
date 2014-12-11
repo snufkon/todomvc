@@ -8,7 +8,8 @@
             [secretary.core :as secretary]
             [todomvc.utils :refer [pluralize now guid store hidden]]
             [clojure.string :as string]
-            [todomvc.item :as item])
+            [todomvc.item :as item]
+            [sablono.core :as html :refer-macros [html]])
   (:import [goog History]
            [goog.history EventType]))
 
@@ -44,40 +45,40 @@
     :completed (:completed todo)))
 
 (defn main [{:keys [todos showing editing] :as app} comm]
-  (dom/section #js {:id "main" :style (hidden (empty? todos))}
-    (dom/input
-      #js {:id "toggle-all" :type "checkbox"
-           :onChange #(toggle-all % app)
-           :checked (every? :completed todos)})
+  (html
+   [:section#main {:style (hidden (empty? todos))}
+    [:input#toggle-all {:type "checkbox"
+                        :onChange #(toggle-all % app)
+                        :checked (every? :completed todos)}]
     (apply dom/ul #js {:id "todo-list"}
-      (om/build-all item/todo-item todos
-        {:init-state {:comm comm}
-         :key :id
-         :fn (fn [todo]
-               (cond-> todo
-                 (= (:id todo) editing) (assoc :editing true)
-                 (not (visible? todo showing)) (assoc :hidden true)))}))))
+           (om/build-all item/todo-item todos
+                         {:init-state {:comm comm}
+                          :key :id
+                          :fn (fn [todo]
+                                (cond-> todo
+                                        (= (:id todo) editing) (assoc :editing true)
+                                        (not (visible? todo showing)) (assoc :hidden true)))}))]))
 
 (defn make-clear-button [completed comm]
   (when (pos? completed)
-    (dom/button
-      #js {:id "clear-completed"
-           :onClick #(put! comm [:clear (now)])}
-      (str "Clear completed (" completed ")"))))
+    (html
+     [:button#clear-completed {:onClick #(put! comm [:clear (now)])}
+      (str "Clear completed (" completed ")")])))
 
 (defn footer [app count completed comm]
   (let [clear-button (make-clear-button completed comm)
         sel (-> (zipmap [:all :active :completed] (repeat ""))
                 (assoc (:showing app) "selected"))]
-    (dom/footer #js {:id "footer" :style (hidden (empty? (:todos app)))}
-      (dom/span #js {:id "todo-count"}
-        (dom/strong nil count)
-        (str " " (pluralize count "item") " left"))
-      (dom/ul #js {:id "filters"}
-        (dom/li nil (dom/a #js {:href "#/" :className (sel :all)} "All"))
-        (dom/li nil (dom/a #js {:href "#/active" :className (sel :active)} "Active"))
-        (dom/li nil (dom/a #js {:href "#/completed" :className (sel :completed)} "Completed")))
-      clear-button)))
+    (html
+     [:footer#footer {:style (hidden (empty? (:todos app)))}
+      [:span#todo-count
+       [:strong count]
+       (str " " (pluralize count "item") " left")]
+      [:ul#filters
+       [:li [:a {:href "#/" :className (sel :all)} "All"]]
+       [:li [:a {:href "#/active" :class (sel :active)} "Active"]]
+       [:li [:a {:href "#/completed" :class (sel :completed)} "Completed"]]]
+      clear-button])))
 
 ;; =============================================================================
 ;; Todos
@@ -146,28 +147,26 @@
     (render-state [_ {:keys [comm]}]
       (let [active    (count (remove :completed todos))
             completed (- (count todos) active)]
-        (dom/div nil
-          (dom/header #js {:id "header"}
-            (dom/h1 nil "todos")
-            (dom/input
-              #js {:ref "newField" :id "new-todo"
-                   :placeholder "What needs to be done?"
-                   :onKeyDown #(handle-new-todo-keydown % app owner)})
-            (main app comm)
-            (footer app active completed comm)))))))
+        (html
+         [:div
+          [:header#header
+           [:h1 "todos"]
+           [:input#new-todo {:ref "newField"
+                             :placeholder "What needs to be done?"
+                             :onKeyDown #(handle-new-todo-keydown % app owner)}]]
+          (main app comm)
+          (footer app active completed comm)])))))
 
 (om/root todo-app app-state
   {:target (.getElementById js/document "todoapp")})
 
 (dom/render
-  (dom/div nil
-    (dom/p nil "Double-click to edit a todo")
-    (dom/p nil
-      (dom/a #js {:href "http://github.com/swannodette"}))
-    (dom/p nil
-      #js ["Part of"
-           (dom/a #js {:href "http://todomvc.com"} "TodoMVC")]))
-  (.getElementById js/document "info"))
+ (html
+  [:div
+   [:p "Double-click to edit a todo"]
+   [:p [:a {:href "http://github.com/swannodette"} "http://github.com/swannodette"]]
+   [:p "Part of" [:a {:href "http://todomvc.com"} "TodoMVC"]]])
+ (.getElementById js/document "info"))
 
 ;; =============================================================================
 ;; Benchmark Stuff

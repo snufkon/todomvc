@@ -3,7 +3,7 @@
             [todomvc.utils :refer [now hidden]]
             [clojure.string :as string]
             [om.core :as om :include-macros true]
-            [om.dom :as dom :include-macros true]))
+            [sablono.core :as html :refer-macros [html]]))
 
 (def ESCAPE_KEY 27)
 (def ENTER_KEY 13)
@@ -44,7 +44,6 @@
 
 ;; -----------------------------------------------------------------------------
 ;; Todo Item
-
 (defn todo-item [todo owner]
   (reify
     om/IInitState
@@ -64,21 +63,21 @@
       (let [class (cond-> ""
                     (:completed todo) (str "completed ")
                     (:editing todo)   (str "editing"))]
-        (dom/li #js {:className class :style (hidden (:hidden todo))}
-          (dom/div #js {:className "view"}
-            (dom/input
-              #js {:className "toggle" :type "checkbox"
-                   :checked (and (:completed todo) "checked")
-                   :onChange (fn [_] (om/transact! todo :completed #(not %)))})
-            (dom/label
-              #js {:onDoubleClick #(edit % todo owner comm)}
-              (:title todo))
-            (dom/button
-              #js {:className "destroy"
-                   :onClick (fn [_] (put! comm [:destroy @todo]))}))
-          (dom/input
-            #js {:ref "editField" :className "edit"
-                 :value (om/get-state owner :edit-text)
-                 :onBlur #(submit % todo owner comm)
-                 :onChange #(change % todo owner)
-                 :onKeyDown #(key-down % todo owner comm)}))))))
+        (html
+         [:li.class {:style (hidden (:hidden todo))}
+          [:div.view
+           [:input.toggle
+            {:type "checkbox"
+             :checked (and (:completed todo) "checked")
+             :onChange (fn [_]
+                         (println "onChange is called")
+                         (om/transact! todo :completed #(not %)))}]
+           [:label {:onDoubleClick #(edit % todo owner comm)}
+            (:title todo)]
+           [:button.destroy {:onClick (fn [_] (put! comm [:destroy @todo]))}]]
+          [:input.edit
+           {:ref "editField"
+            :value (om/get-state owner :edit-text)
+            :onBlur #(submit % todo owner comm)
+            :onChange #(change % todo owner)
+            :onKeyDown #(key-down % todo owner comm)}]])))))
